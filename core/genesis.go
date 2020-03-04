@@ -56,11 +56,20 @@ type Genesis struct {
 	Coinbase   common.Address      `json:"coinbase"`
 	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
 
+	TicketCreateInfo *TicketsCreate `json:"ticketsCreate"`
+
 	// These fields are used for consensus tests. Please don't use them
 	// in actual genesis blocks.
 	Number     uint64      `json:"number"`
 	GasUsed    uint64      `json:"gasUsed"`
 	ParentHash common.Hash `json:"parentHash"`
+}
+
+// TicketsCreate wacom
+type TicketsCreate struct {
+	Owner common.Address `json:"owner"`
+	Count uint64         `json:"count"`
+	Time  uint64         `json:"time"`
 }
 
 // GenesisAlloc specifies the initial state that is part of the genesis block.
@@ -339,11 +348,17 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.MainnetChainConfig,
-		Nonce:      66,
-		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
-		GasLimit:   5000,
-		Difficulty: big.NewInt(17179869184),
-		Alloc:      decodePrealloc(mainnetAllocData),
+		Nonce:      1,
+		ExtraData:  hexutil.MustDecode("0x00000000000000000000000000000000000000000000000000000000000000000000000100000001000000000101040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		GasLimit:   4700000,
+		Difficulty: big.NewInt(1),
+		Timestamp:  1561852800, // June 30 2019
+		TicketCreateInfo: &TicketsCreate{
+			Owner: common.HexToAddress("0xd2452651834e8f0c19c9d85e0bf09fe99283dabc"),
+			Time:  1561852800, // June 30 2019
+			Count: 5,
+		},
+		Alloc: decodePrealloc(mainnetAllocData),
 	}
 }
 
@@ -351,11 +366,17 @@ func DefaultGenesisBlock() *Genesis {
 func DefaultTestnetGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.TestnetChainConfig,
-		Nonce:      66,
-		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
+		Nonce:      2,
+		ExtraData:  hexutil.MustDecode("0x00000000000000000000000000000000000000000000000000000000000000000000000100000001000000000101040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
 		GasLimit:   16777216,
-		Difficulty: big.NewInt(1048576),
-		Alloc:      decodePrealloc(testnetAllocData),
+		Difficulty: big.NewInt(2),
+		Timestamp:  1562744843, // jul 10 2019
+		TicketCreateInfo: &TicketsCreate{
+			Owner: common.HexToAddress("0xd2452651834e8f0c19c9d85e0bf09fe99283dabc"),
+			Time:  1562744843, // jul 10 2019
+			Count: 5,
+		},
+		Alloc: decodePrealloc(testnetAllocData),
 	}
 }
 
