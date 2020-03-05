@@ -101,7 +101,7 @@ func (s *StateDB) dump(c collector, excludeCode, excludeStorage, excludeMissingP
 		addr := common.BytesToAddress(s.trie.GetKey(it.Key))
 		obj := newObject(nil, addr, data)
 		account := DumpAccount{
-			Balance:  data.Balance.String(),
+			Balance:  data.GetBalance(common.SystemAssetID).String(),
 			Nonce:    data.Nonce,
 			Root:     common.Bytes2Hex(data.Root[:]),
 			CodeHash: common.Bytes2Hex(data.CodeHash),

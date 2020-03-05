@@ -94,22 +94,107 @@ type stateObject struct {
 
 // empty returns whether the account is considered empty.
 func (s *stateObject) empty() bool {
-	return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 && bytes.Equal(s.data.CodeHash, emptyCodeHash)
+	if s.data.Nonce != 0 {
+		return false
+	}
+	if len(s.data.BalancesVal) > 0 {
+		return false
+	}
+	if len(s.data.TimeLockBalancesVal) > 0 {
+		return false
+	}
+	if !bytes.Equal(s.data.CodeHash, emptyCodeHash) {
+		return false
+	}
+	if s.address.IsSpecialKeyAddress() {
+		return false
+	}
+	return true
+}
+
+func (s *stateObject) deepCopyBalancesHash() []common.Hash {
+	ret := make([]common.Hash, 0)
+	if len(s.data.BalancesHash) == 0 {
+		return ret
+	}
+
+	for _, v := range s.data.BalancesHash {
+		ret = append(ret, v)
+	}
+
+	return ret
+}
+
+func (s *stateObject) deepCopyBalancesVal() []*big.Int {
+	ret := make([]*big.Int, 0)
+	if len(s.data.BalancesVal) == 0 {
+		return ret
+	}
+
+	for _, v := range s.data.BalancesVal {
+		a := new(big.Int).SetBytes(v.Bytes())
+		ret = append(ret, a)
+	}
+
+	return ret
+}
+
+func (s *stateObject) deepCopyTimeLockBalancesHash() []common.Hash {
+	ret := make([]common.Hash, 0)
+	if len(s.data.TimeLockBalancesHash) == 0 {
+		return ret
+	}
+
+	for _, v := range s.data.TimeLockBalancesHash {
+		ret = append(ret, v)
+	}
+
+	return ret
+}
+
+func (s *stateObject) deepCopyTimeLockBalancesVal() []*common.TimeLock {
+	ret := make([]*common.TimeLock, 0)
+	if len(s.data.TimeLockBalancesVal) == 0 {
+		return ret
+	}
+
+	for _, v := range s.data.TimeLockBalancesVal {
+		t := v.Clone()
+		ret = append(ret, t)
+	}
+
+	return ret
 }
 
 // Account is the Ethereum consensus representation of accounts.
 // These objects are stored in the main account trie.
 type Account struct {
-	Nonce    uint64
-	Balance  *big.Int
+	Nonce   uint64
+	Notaion uint64
+
+	BalancesHash []common.Hash
+	BalancesVal  []*big.Int
+
+	TimeLockBalancesHash []common.Hash
+	TimeLockBalancesVal  []*common.TimeLock
+
 	Root     common.Hash // merkle root of the storage trie
 	CodeHash []byte
 }
 
 // newObject creates a state object.
 func newObject(db *StateDB, address common.Address, data Account) *stateObject {
-	if data.Balance == nil {
-		data.Balance = new(big.Int)
+	if data.BalancesHash == nil {
+		data.BalancesHash = make([]common.Hash, 0)
+	}
+	if data.BalancesVal == nil {
+		data.BalancesVal = make([]*big.Int, 0)
+	}
+	if data.TimeLockBalancesHash == nil {
+		data.TimeLockBalancesHash = make([]common.Hash, 0)
+	}
+	if data.TimeLockBalancesVal == nil {
+		data.TimeLockBalancesVal = make([]*common.TimeLock, 0)
 	}
 	if data.CodeHash == nil {
 		data.CodeHash = emptyCodeHash
@@ -340,42 +425,6 @@ func (s *stateObject) CommitTrie(db Database) error {
 	return err
 }
 
-// AddBalance removes amount from c's balance.
-// It is used to add funds to the destination account of a transfer.
-func (s *stateObject) AddBalance(amount *big.Int) {
-	// EIP158: We must check emptiness for the objects such that the account
-	// clearing (0,0,0 objects) can take effect.
-	if amount.Sign() == 0 {
-		if s.empty() {
-			s.touch()
-		}
-
-		return
-	}
-	s.SetBalance(new(big.Int).Add(s.Balance(), amount))
-}
-
-// SubBalance removes amount from c's balance.
-// It is used to remove funds from the origin account of a transfer.
-func (s *stateObject) SubBalance(amount *big.Int) {
-	if amount.Sign() == 0 {
-		return
-	}
-	s.SetBalance(new(big.Int).Sub(s.Balance(), amount))
-}
-
-func (s *stateObject) SetBalance(amount *big.Int) {
-	s.db.journal.append(balanceChange{
-		account: &s.address,
-		prev:    new(big.Int).Set(s.data.Balance),
-	})
-	s.setBalance(amount)
-}
-
-func (s *stateObject) setBalance(amount *big.Int) {
-	s.data.Balance = amount
-}
-
 // Return the gas back to the origin. Used by the Virtual machine or Closures
 func (s *stateObject) ReturnGas(gas *big.Int) {}
 
@@ -391,6 +440,10 @@ func (s *stateObject) deepCopy(db *StateDB) *stateObject {
 	stateObject.suicided = s.suicided
 	stateObject.dirtyCode = s.dirtyCode
 	stateObject.deleted = s.deleted
+	stateObject.data.BalancesHash = s.deepCopyBalancesHash()
+	stateObject.data.BalancesVal = s.deepCopyBalancesVal()
+	stateObject.data.TimeLockBalancesHash = s.deepCopyTimeLockBalancesHash()
+	stateObject.data.TimeLockBalancesVal = s.deepCopyTimeLockBalancesVal()
 	return stateObject
 }
 
@@ -449,10 +502,6 @@ func (s *stateObject) setNonce(nonce uint64) {
 
 func (s *stateObject) CodeHash() []byte {
 	return s.data.CodeHash
-}
-
-func (s *stateObject) Balance() *big.Int {
-	return s.data.Balance
 }
 
 func (s *stateObject) Nonce() uint64 {

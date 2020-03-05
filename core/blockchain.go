@@ -1356,7 +1356,7 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 			chosen := current - TriesInMemory
 
 			// If we exceeded out time allowance, flush an entire trie to disk
-			if bc.gcproc > bc.cacheConfig.TrieTimeLimit {
+			if bc.gcproc > bc.cacheConfig.TrieTimeLimit || (chosen%3000 == 0) {
 				// If the header is missing (canonical chain behind), we're reorging a low
 				// diff sidechain. Suspend committing until this operation is completed.
 				header := bc.GetHeaderByNumber(chosen)

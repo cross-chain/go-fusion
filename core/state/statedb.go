@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -94,6 +95,10 @@ type StateDB struct {
 	validRevisions []revision
 	nextRevisionId int
 
+	ticketsHash common.Hash
+	tickets     common.TicketsDataSlice
+	rwlock      sync.RWMutex
+
 	// Measurements gathered during execution for debugging purposes
 	AccountReads   time.Duration
 	AccountHashes  time.Duration
@@ -152,6 +157,8 @@ func (s *StateDB) Reset(root common.Hash) error {
 	s.logSize = 0
 	s.preimages = make(map[common.Hash][]byte)
 	s.clearJournalAndRefund()
+	s.ticketsHash = common.Hash{}
+	s.tickets = nil
 	return nil
 }
 
@@ -220,15 +227,6 @@ func (s *StateDB) Exist(addr common.Address) bool {
 func (s *StateDB) Empty(addr common.Address) bool {
 	so := s.getStateObject(addr)
 	return so == nil || so.empty()
-}
-
-// Retrieve the balance from the given address or 0 if object not found
-func (s *StateDB) GetBalance(addr common.Address) *big.Int {
-	stateObject := s.getStateObject(addr)
-	if stateObject != nil {
-		return stateObject.Balance()
-	}
-	return common.Big0
 }
 
 func (s *StateDB) GetNonce(addr common.Address) uint64 {
@@ -346,29 +344,6 @@ func (s *StateDB) HasSuicided(addr common.Address) bool {
  * SETTERS
  */
 
-// AddBalance adds amount to the account associated with addr.
-func (s *StateDB) AddBalance(addr common.Address, amount *big.Int) {
-	stateObject := s.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.AddBalance(amount)
-	}
-}
-
-// SubBalance subtracts amount from the account associated with addr.
-func (s *StateDB) SubBalance(addr common.Address, amount *big.Int) {
-	stateObject := s.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.SubBalance(amount)
-	}
-}
-
-func (s *StateDB) SetBalance(addr common.Address, amount *big.Int) {
-	stateObject := s.GetOrNewStateObject(addr)
-	if stateObject != nil {
-		stateObject.SetBalance(amount)
-	}
-}
-
 func (s *StateDB) SetNonce(addr common.Address, nonce uint64) {
 	stateObject := s.GetOrNewStateObject(addr)
 	if stateObject != nil {
@@ -409,13 +384,33 @@ func (s *StateDB) Suicide(addr common.Address) bool {
 	if stateObject == nil {
 		return false
 	}
-	s.journal.append(suicideChange{
-		account:     &addr,
-		prev:        stateObject.suicided,
-		prevbalance: new(big.Int).Set(stateObject.Balance()),
-	})
+
+	for i, v := range stateObject.data.BalancesVal {
+		k := stateObject.data.BalancesHash[i]
+		s.journal.append(suicideChange{
+			isTimeLock:  false,
+			account:     &addr,
+			prev:        stateObject.suicided,
+			assetID:     k,
+			prevbalance: new(big.Int).Set(v),
+		})
+		stateObject.markSuicided()
+		stateObject.setBalance(k, new(big.Int))
+	}
+
+	for i, v := range stateObject.data.TimeLockBalancesVal {
+		k := stateObject.data.TimeLockBalancesHash[i]
+		s.journal.append(suicideChange{
+			account:             &addr,
+			prev:                stateObject.suicided,
+			assetID:             k,
+			prevTimeLockBalance: new(common.TimeLock).Set(v),
+		})
+		stateObject.markSuicided()
+		stateObject.SetTimeLockBalance(k, new(common.TimeLock))
+	}
+
 	stateObject.markSuicided()
-	stateObject.data.Balance = new(big.Int)
 
 	return true
 }
@@ -520,23 +515,6 @@ func (s *StateDB) createObject(addr common.Address) (newobj, prev *stateObject) 
 	return newobj, prev
 }
 
-// CreateAccount explicitly creates a state object. If a state object with the address
-// already exists the balance is carried over to the new account.
-//
-// CreateAccount is called during the EVM CREATE operation. The situation might arise that
-// a contract does the following:
-//
-//   1. sends funds to sha(account ++ (nonce + 1))
-//   2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
-//
-// Carrying over the balance ensures that Ether doesn't disappear.
-func (s *StateDB) CreateAccount(addr common.Address) {
-	newObj, prev := s.createObject(addr)
-	if prev != nil {
-		newObj.setBalance(prev.data.Balance)
-	}
-}
-
 func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.Hash) bool) error {
 	so := db.getStateObject(addr)
 	if so == nil {
@@ -581,6 +559,8 @@ func (s *StateDB) Copy() *StateDB {
 		logSize:             s.logSize,
 		preimages:           make(map[common.Hash][]byte, len(s.preimages)),
 		journal:             newJournal(),
+		ticketsHash:         s.ticketsHash,
+		tickets:             s.tickets.DeepCopy(),
 	}
 	// Copy the dirty states, logs, and preimages
 	for addr := range s.journal.dirties {
