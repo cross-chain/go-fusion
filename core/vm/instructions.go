@@ -879,6 +879,11 @@ func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 	receiver := common.BigToAddress(stack.pop())
 	interpreter.evm.StateDB.AddBalance(receiver, common.SystemAssetID, balance)
 
+	if common.IsHardFork(2, interpreter.evm.BlockNumber) {
+		timelock := interpreter.evm.StateDB.GetTimeLockBalance(common.SystemAssetID, contract.Address())
+		interpreter.evm.StateDB.AddTimeLockBalance(receiver, common.SystemAssetID, timelock, interpreter.evm.BlockNumber, interpreter.evm.ParentTime.Uint64())
+	}
+
 	interpreter.evm.StateDB.Suicide(contract.Address())
 	return nil, nil
 }

@@ -64,6 +64,38 @@ type StateDB interface {
 	AddPreimage(common.Hash, []byte)
 
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
+
+	SubTimeLockBalance(common.Address, common.Hash, *common.TimeLock, *big.Int, uint64)
+	AddTimeLockBalance(common.Address, common.Hash, *common.TimeLock, *big.Int, uint64)
+	GetTimeLockBalance(common.Hash, common.Address) *common.TimeLock
+	SetTimeLockBalance(common.Address, common.Hash, *common.TimeLock)
+
+	GenNotation(common.Address) error
+	GetNotation(common.Address) uint64
+	TransferNotation(notation uint64, from common.Address, to common.Address) error
+
+	GenAsset(common.Asset) error
+	GetAsset(assetID common.Hash) (common.Asset, error)
+	UpdateAsset(common.Asset) error
+
+	AllTickets() (common.TicketsDataSlice, error)
+	AddTicket(common.Ticket) error
+	RemoveTicket(id common.Hash) error
+	GetTicket(id common.Hash) (*common.Ticket, error)
+	IsTicketExist(id common.Hash) bool
+
+	AddSwap(swap common.Swap) error
+	UpdateSwap(swap common.Swap) error
+	RemoveSwap(id common.Hash) error
+	GetSwap(swapID common.Hash) (common.Swap, error)
+
+	AddMultiSwap(swap common.MultiSwap) error
+	UpdateMultiSwap(swap common.MultiSwap) error
+	RemoveMultiSwap(id common.Hash) error
+	GetMultiSwap(swapID common.Hash) (common.MultiSwap, error)
+
+	IsReportExist(report []byte) bool
+	AddReport(report []byte) error
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM

@@ -42,17 +42,9 @@ type (
 
 // run runs the given contract and takes care of running precompiles with a fallback to the byte code interpreter.
 func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, error) {
-	if contract.CodeAddr != nil {
-		precompiles := PrecompiledContractsHomestead
-		if evm.chainRules.IsByzantium {
-			precompiles = PrecompiledContractsByzantium
-		}
-		if evm.chainRules.IsIstanbul {
-			precompiles = PrecompiledContractsIstanbul
-		}
-		if p := precompiles[*contract.CodeAddr]; p != nil {
-			return RunPrecompiledContract(p, input, contract)
-		}
+	p := getPrecompiledContracts(evm, contract.CodeAddr, contract)
+	if p != nil {
+		return RunPrecompiledContract(p, input, contract)
 	}
 	for _, interpreter := range evm.interpreters {
 		if interpreter.CanRun(contract.Code) {
@@ -81,6 +73,10 @@ type Context struct {
 	// GetHash returns the hash corresponding to n
 	GetHash GetHashFunc
 
+	// FIP-0001
+	CanTransferTimeLock CanTransferTimeLockFunc
+	TransferTimeLock    TransferTimeLockFunc
+
 	// Message information
 	Origin   common.Address // Provides information for ORIGIN
 	GasPrice *big.Int       // Provides information for GASPRICE
@@ -91,6 +87,8 @@ type Context struct {
 	BlockNumber *big.Int       // Provides information for NUMBER
 	Time        *big.Int       // Provides information for TIME
 	Difficulty  *big.Int       // Provides information for DIFFICULTY
+	ParentTime  *big.Int       // Provides information for TIME
+	MixDigest   common.Hash    // Provides information for MIXDIGEST
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides
@@ -195,9 +193,35 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, gas, ErrDepth
 	}
+
+	isTransferTimeLock := false
+	p := &common.TransferTimeLockParam{}
+	if common.IsReceiveAssetPayableTx(evm.BlockNumber, input) {
+		_, ok := caller.(*Contract)
+		if ok { // prvent input data from being modified
+			return nil, gas, ErrForbidCallByContract
+		}
+		if evm.StateDB.GetCodeSize(addr) == 0 {
+			return nil, gas, ErrToAddressMustBeContract
+		}
+		err = common.ParseReceiveAssetPayableTxInput(p, input, evm.Time.Uint64())
+		if err != nil {
+			return nil, gas, err
+		}
+		isTransferTimeLock = true
+		p.Value = value
+		p.BlockNumber = evm.BlockNumber
+	}
+
 	// Fail if we're trying to transfer more than the available balance
-	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
-		return nil, gas, ErrInsufficientBalance
+	if isTransferTimeLock {
+		if !evm.Context.CanTransferTimeLock(evm.StateDB, caller.Address(), p) {
+			return nil, gas, ErrInsufficientBalance
+		}
+	} else {
+		if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
+			return nil, gas, ErrInsufficientBalance
+		}
 	}
 
 	var (
@@ -205,14 +229,8 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		snapshot = evm.StateDB.Snapshot()
 	)
 	if !evm.StateDB.Exist(addr) {
-		precompiles := PrecompiledContractsHomestead
-		if evm.chainRules.IsByzantium {
-			precompiles = PrecompiledContractsByzantium
-		}
-		if evm.chainRules.IsIstanbul {
-			precompiles = PrecompiledContractsIstanbul
-		}
-		if precompiles[addr] == nil && evm.chainRules.IsEIP158 && value.Sign() == 0 {
+		p := getPrecompiledContracts(evm, &addr, nil)
+		if p == nil && evm.chainRules.IsEIP158 && value.Sign() == 0 {
 			// Calling a non existing account, don't do anything, but ping the tracer
 			if evm.vmConfig.Debug && evm.depth == 0 {
 				evm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
@@ -222,7 +240,11 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		}
 		evm.StateDB.CreateAccount(addr)
 	}
-	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
+	if isTransferTimeLock {
+		evm.TransferTimeLock(evm.StateDB, caller.Address(), to.Address(), p)
+	} else {
+		evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
+	}
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
 	contract := NewContract(caller, to, value, gas)
@@ -305,6 +327,10 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 	// Fail if we're trying to execute above the call depth limit
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, gas, ErrDepth
+	}
+	// delegate call into FSNContractAddress is forbidden for security reason
+	if addr == FSNContractAddress {
+		return nil, gas, ErrForbidDelegateCall
 	}
 
 	var (
