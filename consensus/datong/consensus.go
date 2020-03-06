@@ -160,7 +160,10 @@ func (dt *DaTong) verifyHeader(chain consensus.ChainReader, header *types.Header
 	if err = dt.checkBlockTime(chain, header, parent); err != nil {
 		return err
 	}
-	return dt.verifySeal(chain, header, parent)
+	if seal {
+		return dt.verifySeal(chain, header, parent)
+	}
+	return nil
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules of the
@@ -177,7 +180,7 @@ func (dt *DaTong) VerifyHeaders(chain consensus.ChainReader, headers []*types.He
 	results := make(chan error, len(headers))
 	go func() {
 		for i, header := range headers {
-			err := dt.verifyHeader(chain, header, seals[i], headers[:i])
+			err := dt.verifyHeader(chain, header, false, headers[:i])
 			select {
 			case <-abort:
 				return
@@ -219,6 +222,10 @@ func getParent(chain consensus.ChainReader, header *types.Header, parents []*typ
 		return nil, consensus.ErrUnknownAncestor
 	}
 	return parent, nil
+}
+
+func (dt *DaTong) VerifySeal2(chain consensus.ChainReader, header, parent *types.Header) error {
+	return dt.verifySeal(chain, header, parent)
 }
 
 // VerifySeal checks whether the crypto seal on a header is valid according to

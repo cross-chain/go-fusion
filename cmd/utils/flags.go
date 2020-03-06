@@ -1549,7 +1549,7 @@ func setDNSDiscoveryDefaults(cfg *eth.Config, url string) {
 	if cfg.DiscoveryURLs != nil {
 		return
 	}
-	cfg.DiscoveryURLs = []string{url}
+	//cfg.DiscoveryURLs = []string{url}
 }
 
 // RegisterEthService adds an Ethereum client to the stack.

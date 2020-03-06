@@ -73,6 +73,8 @@ var (
 	blockPrefetchInterruptMeter = metrics.NewRegisteredMeter("chain/prefetch/interrupts", nil)
 
 	errInsertionInterrupted = errors.New("insertion is interrupted")
+
+	ResyncFromHeight uint64 = 0 // force sync from this height even though has synced
 )
 
 const (
@@ -169,6 +171,7 @@ type BlockChain struct {
 	procInterrupt int32          // interrupt signaler for block processing
 	wg            sync.WaitGroup // chain processing wait group for shutting down
 
+	datongEng  *datong.DaTong
 	engine     consensus.Engine
 	validator  Validator  // Block and state validator interface
 	prefetcher Prefetcher // Block state prefetcher interface
@@ -224,6 +227,7 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 	if datong, ok := engine.(*datong.DaTong); ok {
 		datong.SetStateCache(bc.stateCache)
 		datong.SetChainConfig(bc.chainConfig)
+		bc.datongEng = datong
 	}
 
 	var err error
@@ -343,6 +347,14 @@ func (bc *BlockChain) loadLastState() error {
 		// Corrupt or empty database, init from scratch
 		log.Warn("Head block missing, resetting chain", "hash", head)
 		return bc.Reset()
+	}
+	if ResyncFromHeight > 0 && currentBlock.NumberU64() > ResyncFromHeight {
+		resyncBlock := bc.GetBlockByNumber(ResyncFromHeight)
+		if resyncBlock != nil {
+			currentBlock = resyncBlock
+		} else {
+			log.Warn("can not resync from height %v", ResyncFromHeight)
+		}
 	}
 	// Make sure the state associated with the block is available
 	if _, err := state.New(currentBlock.Root(), bc.stateCache); err != nil {
@@ -492,7 +504,7 @@ func (bc *BlockChain) FastSyncCommitHead(hash common.Hash) error {
 	headBlockGauge.Update(int64(block.NumberU64()))
 	bc.chainmu.Unlock()
 
-	log.Info("Committed new head block", "number", block.Number(), "hash", hash)
+	log.Info("Committed new head block", "number", block.Number(), "order", block.Nonce(), "hash", hash)
 	return nil
 }
 
@@ -531,6 +543,10 @@ func (bc *BlockChain) State() (*state.StateDB, error) {
 // StateAt returns a new mutable state based on a particular point in time.
 func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
 	return state.New(root, bc.stateCache)
+}
+
+func (bc *BlockChain) StateAt2(root common.Hash, mixDigest common.Hash) (*state.StateDB, error) {
+	return state.New2(root, mixDigest, bc.stateCache)
 }
 
 // StateCache returns the caching database underpinning the blockchain instance.
@@ -1262,6 +1278,17 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 	return 0, nil
 }
 
+func (bc *BlockChain) CheckAndReportMultipleMining(block *types.Block) {
+	savedBlock := bc.GetBlockByNumber(block.NumberU64())
+	if savedBlock != nil &&
+		savedBlock.Hash() != block.Hash() &&
+		savedBlock.ParentHash() == block.ParentHash() &&
+		savedBlock.Coinbase() == block.Coinbase() {
+		log.Info("multiple block mined", "number", block.NumberU64(), "order", block.Nonce(), "miner", block.Coinbase(), "parentHash", block.ParentHash().String(), "hash1", savedBlock.Hash().String(), "hash2", block.Hash().String())
+		datong.ReportIllegal(savedBlock.Header(), block.Header())
+	}
+}
+
 var lastWrite uint64
 
 // writeBlockWithoutState writes only the block and its metadata to the database,
@@ -1277,6 +1304,7 @@ func (bc *BlockChain) writeBlockWithoutState(block *types.Block, td *big.Int) (e
 	if err := batch.Write(); err != nil {
 		log.Crit("Failed to write block into disk", "err", err)
 	}
+	bc.CheckAndReportMultipleMining(block)
 	return nil
 }
 
@@ -1420,9 +1448,16 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 	} else {
 		status = SideStatTy
 	}
+	bc.CheckAndReportMultipleMining(block)
 	// Set new head.
 	if status == CanonStatTy {
 		bc.writeHeadBlock(block)
+		// (auto) buy ticket when block height changed
+		if common.AutoBuyTicket == true { // if enable
+			go func() { // do not block process
+				common.AutoBuyTicketChan <- 1
+			}()
+		}
 	}
 	bc.futureBlocks.Remove(block.Hash())
 
@@ -1653,9 +1688,14 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 		if parent == nil {
 			parent = bc.GetHeader(block.ParentHash(), block.NumberU64()-1)
 		}
-		statedb, err := state.New(parent.Root, bc.stateCache)
+		statedb, err := state.New2(parent.Root, parent.MixDigest, bc.stateCache)
 		if err != nil {
 			return it.index, err
+		}
+		if bc.datongEng != nil {
+			if err := bc.datongEng.VerifySeal2(bc, block.RawHeader(), parent); err != nil {
+				return it.index, err
+			}
 		}
 		// If we have a followup block, run that against the current state to pre-cache
 		// transactions and probabilistically some of the account/storage trie nodes.
@@ -2011,7 +2051,8 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 			logFn = log.Warn
 		}
 		logFn(msg, "number", commonBlock.Number(), "hash", commonBlock.Hash(),
-			"drop", len(oldChain), "dropfrom", oldChain[0].Hash(), "add", len(newChain), "addfrom", newChain[0].Hash())
+			"drop", len(oldChain), "dropfrom", oldChain[0].Hash(), "droporder", oldChain[0].Nonce(),
+			"add", len(newChain), "addfrom", newChain[0].Hash(), "addorder", newChain[0].Nonce())
 		blockReorgAddMeter.Mark(int64(len(newChain)))
 		blockReorgDropMeter.Mark(int64(len(oldChain)))
 	} else {
@@ -2110,12 +2151,13 @@ func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, e
 Chain config: %v
 
 Number: %v
+Order: %v
 Hash: 0x%x
 %v
 
 Error: %v
 ##############################
-`, bc.chainConfig, block.Number(), block.Hash(), receiptString, err))
+`, bc.chainConfig, block.Number(), block.Nonce(), block.Hash(), receiptString, err))
 }
 
 // InsertHeaderChain attempts to insert the given header chain in to the local

@@ -19,10 +19,12 @@ package core
 import (
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 // BlockValidator is responsible for validating block headers, uncles and
@@ -58,11 +60,11 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	if err := v.engine.VerifyUncles(v.bc, block); err != nil {
 		return err
 	}
-	if hash := types.CalcUncleHash(block.Uncles()); hash != header.UncleHash {
-		return fmt.Errorf("uncle root hash mismatch: have %x, want %x", hash, header.UncleHash)
-	}
 	if hash := types.DeriveSha(block.Transactions()); hash != header.TxHash {
 		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", hash, header.TxHash)
+	}
+	if err := v.ValidateRawTransaction(block); err != nil {
+		return err
 	}
 	if !v.bc.HasBlockAndState(block.ParentHash(), block.NumberU64()-1) {
 		if !v.bc.HasBlock(block.ParentHash(), block.NumberU64()-1) {
@@ -136,4 +138,29 @@ func CalcGasLimit(parent *types.Block, gasFloor, gasCeil uint64) uint64 {
 		}
 	}
 	return limit
+}
+
+// ValidateRawTransaction validates the given block's raw transactions before applying them
+func (v *BlockValidator) ValidateRawTransaction(block *types.Block) error {
+	blockNumber := block.Number()
+	ticketBuyers := map[common.Address]bool{}
+	signer := types.MakeSigner(v.config, blockNumber)
+	for i, tx := range block.Transactions() {
+		param := common.FSNCallParam{}
+		rlp.DecodeBytes(tx.Data(), &param)
+		if param.Func != common.BuyTicketFunc {
+			continue
+		}
+		// Make sure the transaction is signed properly
+		from, err := types.Sender(signer, tx)
+		if err != nil {
+			return ErrInvalidSender
+		}
+		// check in single block each account can buy only one ticket
+		if _, ok := ticketBuyers[from]; ok {
+			return fmt.Errorf("block %v hash %x, transaction %x index %v, sender %v is buying more than one ticket", blockNumber, block.Hash(), tx.Hash(), i, from.String())
+		}
+		ticketBuyers[from] = true
+	}
+	return nil
 }

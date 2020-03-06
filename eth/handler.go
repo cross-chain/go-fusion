@@ -696,9 +696,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&request); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
-		if hash := types.CalcUncleHash(request.Block.Uncles()); hash != request.Block.UncleHash() {
-			log.Warn("Propagated block has invalid uncles", "have", hash, "exp", request.Block.UncleHash())
-			break // TODO(karalabe): return error eventually, but wait a few releases
+		if len(request.Block.Uncles()) != 0 {
+			return fmt.Errorf("server returned non-empty uncle list")
 		}
 		if hash := types.DeriveSha(request.Block.Transactions()); hash != request.Block.TxHash() {
 			log.Warn("Propagated block has invalid body", "have", hash, "exp", request.Block.TxHash())
