@@ -38,6 +38,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/internal/debug"
+	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/les"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
@@ -46,7 +47,7 @@ import (
 )
 
 const (
-	clientIdentifier = "geth" // Client identifier to advertise over the network
+	clientIdentifier = "efsn" // Client identifier to advertise over the network
 )
 
 var (
@@ -54,7 +55,7 @@ var (
 	gitCommit = ""
 	gitDate   = ""
 	// The app that holds all commands and flags.
-	app = utils.NewApp(gitCommit, gitDate, "the go-ethereum command line interface")
+	app = utils.NewApp(gitCommit, gitDate, "the Efsn command line interface")
 	// flags that configure the node
 	nodeFlags = []cli.Flag{
 		utils.IdentityFlag,
@@ -125,6 +126,7 @@ var (
 		utils.MinerLegacyExtraDataFlag,
 		utils.MinerRecommitIntervalFlag,
 		utils.MinerNoVerfiyFlag,
+		utils.AutoBuyTicketsEnabledFlag,
 		utils.NATFlag,
 		utils.NoDiscoverFlag,
 		utils.DiscoveryV5Flag,
@@ -137,6 +139,8 @@ var (
 		utils.TestnetFlag,
 		utils.RinkebyFlag,
 		utils.GoerliFlag,
+		utils.DevnetFlag,
+		utils.DevnetAddrFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.EthStatsURLFlag,
@@ -146,6 +150,7 @@ var (
 		utils.GpoPercentileFlag,
 		utils.EWASMInterpreterFlag,
 		utils.EVMInterpreterFlag,
+		utils.ResyncFromHeightFlag,
 		configFileFlag,
 	}
 
@@ -195,7 +200,7 @@ func init() {
 	// Initialize the CLI app and start Geth
 	app.Action = geth
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2013-2020 The go-ethereum Authors"
+	app.Copyright = "Copyright 2013-2020 The Efsn Authors"
 	app.Commands = []cli.Command{
 		// See chaincmd.go:
 		initCommand,
@@ -316,6 +321,13 @@ func geth(ctx *cli.Context) error {
 func startNode(ctx *cli.Context, stack *node.Node) {
 	debug.Memsize.Add("node", stack)
 
+	// add more log and checking in devnet
+	if ctx.GlobalBool(utils.DevnetFlag.Name) {
+		common.InitDevnet()
+	} else if ctx.GlobalBool(utils.TestnetFlag.Name) {
+		common.InitTestnet()
+	}
+
 	// Start up the node itself
 	utils.StartNode(stack)
 
@@ -408,6 +420,11 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			}
 		}()
 	}
+
+	// Start auto buy tickets
+	go ethapi.AutoBuyTicket(ctx.GlobalBool(utils.AutoBuyTicketsEnabledFlag.Name))
+	// Start report illegal
+	go ethapi.ReportIllegal()
 
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {

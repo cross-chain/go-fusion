@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/forkid"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/p2p"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -561,6 +562,9 @@ func (p *peer) RequestTxs(hashes []common.Hash) error {
 // Handshake executes the eth protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.
 func (p *peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis common.Hash, forkID forkid.ID, forkFilter forkid.Filter) error {
+	if network == params.TestnetChainConfig.ChainID.Uint64() {
+		network = 3 // old testnet network id
+	}
 	// Send out own handshake in a new thread
 	errc := make(chan error, 2)
 

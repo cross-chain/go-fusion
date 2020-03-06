@@ -127,9 +127,11 @@ func remoteConsole(ctx *cli.Context) error {
 				path = filepath.Join(path, "testnet")
 			} else if ctx.GlobalBool(utils.RinkebyFlag.Name) {
 				path = filepath.Join(path, "rinkeby")
+			} else if ctx.GlobalBool(utils.DevnetFlag.Name) {
+				path = filepath.Join(path, "devnet")
 			}
 		}
-		endpoint = fmt.Sprintf("%s/geth.ipc", path)
+		endpoint = fmt.Sprintf("%s/efsn.ipc", path)
 	}
 	client, err := dialRPC(endpoint)
 	if err != nil {

@@ -214,6 +214,23 @@ var (
 		Threshold: 2,
 	}
 
+	// DevnetChainConfig is the chain parameters to run a node on the develop network.
+	DevnetChainConfig = &ChainConfig{
+		ChainID:             big.NewInt(55555),
+		HomesteadBlock:      big.NewInt(0),
+		DAOForkBlock:        big.NewInt(0),
+		DAOForkSupport:      false,
+		EIP150Block:         big.NewInt(0),
+		EIP150Hash:          common.HexToHash("0x0"),
+		EIP155Block:         big.NewInt(0),
+		EIP158Block:         big.NewInt(0),
+		ByzantiumBlock:      big.NewInt(0),
+		ConstantinopleBlock: big.NewInt(0),
+		DaTong: &DaTongConfig{
+			Period: 15,
+		},
+	}
+
 	// AllEthashProtocolChanges contains every protocol change (EIPs) introduced
 	// and accepted by the Ethereum core developers into the Ethash consensus.
 	//
