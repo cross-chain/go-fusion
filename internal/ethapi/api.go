@@ -535,7 +535,7 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 	if state == nil || err != nil {
 		return nil, err
 	}
-	return (*hexutil.Big)(state.GetBalance(address)), state.Error()
+	return (*hexutil.Big)(state.GetBalance(common.SystemAssetID, address)), state.Error()
 }
 
 // Result structs for GetProof
@@ -596,7 +596,7 @@ func (s *PublicBlockChainAPI) GetProof(ctx context.Context, address common.Addre
 	return &AccountResult{
 		Address:      address,
 		AccountProof: common.ToHexArray(accountProof),
-		Balance:      (*hexutil.Big)(state.GetBalance(address)),
+		Balance:      (*hexutil.Big)(state.GetBalance(common.SystemAssetID, address)),
 		CodeHash:     codeHash,
 		Nonce:        hexutil.Uint64(state.GetNonce(address)),
 		StorageHash:  storageHash,
@@ -783,7 +783,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 		}
 		// Override account balance.
 		if account.Balance != nil {
-			state.SetBalance(addr, (*big.Int)(*account.Balance))
+			state.SetBalance(addr, common.SystemAssetID, (*big.Int)(*account.Balance))
 		}
 		if account.State != nil && account.StateDiff != nil {
 			return nil, 0, false, fmt.Errorf("account %s has both 'state' and 'stateDiff'", addr.Hex())

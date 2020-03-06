@@ -224,9 +224,9 @@ func (e *NoRewardEngine) accumulateRewards(config *params.ChainConfig, state *st
 	// Simply touch miner and uncle coinbase accounts
 	reward := big.NewInt(0)
 	for _, uncle := range uncles {
-		state.AddBalance(uncle.Coinbase, reward)
+		state.AddBalance(uncle.Coinbase, common.SystemAssetID, reward)
 	}
-	state.AddBalance(header.Coinbase, reward)
+	state.AddBalance(header.Coinbase, common.SystemAssetID, reward)
 }
 
 func (e *NoRewardEngine) Finalize(chain consensus.ChainReader, header *types.Header, statedb *state.StateDB, txs []*types.Transaction,
@@ -719,7 +719,7 @@ func (api *RetestethAPI) GetBalance(ctx context.Context, address common.Address,
 	if err != nil {
 		return nil, err
 	}
-	return (*math.HexOrDecimal256)(statedb.GetBalance(address)), nil
+	return (*math.HexOrDecimal256)(statedb.GetBalance(common.SystemAssetID, address)), nil
 }
 
 func (api *RetestethAPI) GetCode(ctx context.Context, address common.Address, blockNr math.HexOrDecimal64) (hexutil.Bytes, error) {

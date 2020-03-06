@@ -162,7 +162,7 @@ func (b *SimulatedBackend) BalanceAt(ctx context.Context, contract common.Addres
 		return nil, err
 	}
 
-	return statedb.GetBalance(contract), nil
+	return statedb.GetBalance(common.SystemAssetID, contract), nil
 }
 
 // NonceAt returns the nonce of a certain account in the blockchain.
@@ -443,7 +443,7 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call ethereum.CallM
 	}
 	// Set infinite balance to the fake caller account.
 	from := statedb.GetOrNewStateObject(call.From)
-	from.SetBalance(math.MaxBig256)
+	from.SetBalance(common.SystemAssetID, math.MaxBig256)
 	// Execute the call.
 	msg := callmsg{call}
 
