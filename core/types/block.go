@@ -69,7 +69,7 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 // Header represents a block header in the Ethereum blockchain.
 type Header struct {
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
-	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
+	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"` // NOTE: store `posHash`
 	Coinbase    common.Address `json:"miner"            gencodec:"required"`
 	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
 	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
@@ -81,8 +81,27 @@ type Header struct {
 	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
 	Time        uint64         `json:"timestamp"        gencodec:"required"`
 	Extra       []byte         `json:"extraData"        gencodec:"required"`
-	MixDigest   common.Hash    `json:"mixHash"`
-	Nonce       BlockNonce     `json:"nonce"`
+	MixDigest   common.Hash    `json:"mixHash"          gencodec:"required"` // NOTE: store `tickets CodeHash`
+	Nonce       BlockNonce     `json:"nonce"            gencodec:"required"` // NOTE: store `selected ticket's Order`
+
+	selectedTicket *common.Ticket        // NOTE: cache result of difficulty calculation
+	retreatTickets common.TicketPtrSlice // NOTE: cache result of difficulty calculation
+}
+
+func (h *Header) GetSelectedTicket() *common.Ticket {
+	return h.selectedTicket
+}
+
+func (h *Header) SetSelectedTicket(t *common.Ticket) {
+	h.selectedTicket = t
+}
+
+func (h *Header) GetRetreatTickets() common.TicketPtrSlice {
+	return h.retreatTickets
+}
+
+func (h *Header) SetRetreatTickets(s common.TicketPtrSlice) {
+	h.retreatTickets = s
 }
 
 // field type overrides for gencodec
