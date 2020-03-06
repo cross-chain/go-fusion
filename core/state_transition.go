@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 var (
@@ -58,6 +59,7 @@ type StateTransition struct {
 	data       []byte
 	state      vm.StateDB
 	evm        *vm.EVM
+	fee        *big.Int
 }
 
 // Message represents a message sent to a contract.
@@ -122,6 +124,7 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 		value:    msg.Value(),
 		data:     msg.Data(),
 		state:    evm.StateDB,
+		fee:      big.NewInt(0),
 	}
 }
 
@@ -155,6 +158,7 @@ func (st *StateTransition) useGas(amount uint64) error {
 
 func (st *StateTransition) buyGas() error {
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
+	mgval.Add(mgval, st.fee)
 	if st.state.GetBalance(common.SystemAssetID, st.msg.From()).Cmp(mgval) < 0 {
 		return errInsufficientBalanceForGas
 	}
@@ -185,10 +189,16 @@ func (st *StateTransition) preCheck() error {
 // returning the result including the used gas. It returns an error if failed.
 // An error indicates a consensus issue.
 func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bool, err error) {
+	msg := st.msg
+	var fsnCallParam *common.FSNCallParam
+	if common.IsFsnCall(msg.To()) {
+		fsnCallParam = &common.FSNCallParam{}
+		rlp.DecodeBytes(msg.Data(), fsnCallParam)
+		st.fee = common.GetFsnCallFee(msg.To(), fsnCallParam.Func)
+	}
 	if err = st.preCheck(); err != nil {
 		return
 	}
-	msg := st.msg
 	sender := vm.AccountRef(msg.From())
 	homestead := st.evm.ChainConfig().IsHomestead(st.evm.BlockNumber)
 	istanbul := st.evm.ChainConfig().IsIstanbul(st.evm.BlockNumber)
@@ -215,10 +225,24 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
+
+		if fsnCallParam != nil {
+			errc := st.handleFsnCall(fsnCallParam)
+			if errc != nil {
+				isInMining := st.evm.Context.MixDigest == (common.Hash{})
+				if isInMining {
+					// don't pack tx if handle FsnCall meet error
+					return nil, 0, false, errc
+				}
+				common.DebugInfo("handleFsnCall error", "number", st.evm.Context.BlockNumber, "Func", fsnCallParam.Func, "err", errc)
+			}
+		}
+
 		ret, st.gas, vmerr = evm.Call(sender, st.to(), st.data, st.gas, st.value)
 	}
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", vmerr)
+		common.DebugInfo("VM returned with error", "err", vmerr)
 		// The only possible consensus-error would be if there wasn't
 		// sufficient balance to make the transfer happen. The first
 		// balance transfer may never fail.
@@ -227,7 +251,11 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		}
 	}
 	st.refundGas()
-	st.state.AddBalance(st.evm.Coinbase, common.SystemAssetID, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+	minerFees := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
+	if st.fee.Sign() > 0 {
+		minerFees.Add(minerFees, st.fee)
+	}
+	st.state.AddBalance(st.evm.Coinbase, common.SystemAssetID, minerFees)
 
 	return ret, st.gasUsed(), vmerr != nil, err
 }
