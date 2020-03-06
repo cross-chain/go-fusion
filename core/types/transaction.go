@@ -248,6 +248,11 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 // Cost returns amount + gasprice * gaslimit.
 func (tx *Transaction) Cost() *big.Int {
 	total := new(big.Int).Mul(tx.data.Price, new(big.Int).SetUint64(tx.data.GasLimit))
+	if common.IsReceiveAssetPayableTx(nil, tx.data.Payload) {
+		// in this situation, tx.data.Amount may be timelock value,
+		// we'll use `CanTransferTimeLock` to judge wether the balance is enough instead.
+		return total
+	}
 	total.Add(total, tx.data.Amount)
 	return total
 }
@@ -256,6 +261,24 @@ func (tx *Transaction) Cost() *big.Int {
 // The return values should not be modified by the caller.
 func (tx *Transaction) RawSignatureValues() (v, r, s *big.Int) {
 	return tx.data.V, tx.data.R, tx.data.S
+}
+
+func (tx *Transaction) IsBuyTicketTx() bool {
+	param := common.FSNCallParam{}
+	rlp.DecodeBytes(tx.Data(), &param)
+	return param.Func == common.BuyTicketFunc
+}
+
+func (tx *Transaction) GetOrder() int {
+	param := common.FSNCallParam{}
+	rlp.DecodeBytes(tx.Data(), &param)
+	switch param.Func {
+	case common.ReportIllegalFunc:
+		return 1000
+	case common.BuyTicketFunc:
+		return 900
+	}
+	return 0
 }
 
 // Transactions is a Transaction slice type for basic sorting.
@@ -304,9 +327,16 @@ func (s TxByNonce) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 // for all at once sorting as well as individually adding and removing elements.
 type TxByPrice Transactions
 
-func (s TxByPrice) Len() int           { return len(s) }
-func (s TxByPrice) Less(i, j int) bool { return s[i].data.Price.Cmp(s[j].data.Price) > 0 }
-func (s TxByPrice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s TxByPrice) Len() int { return len(s) }
+func (s TxByPrice) Less(i, j int) bool {
+	order1 := s[i].GetOrder()
+	order2 := s[j].GetOrder()
+	if order1 != order2 { // higher order first
+		return order1 > order2
+	}
+	return s[i].data.Price.Cmp(s[j].data.Price) > 0
+}
+func (s TxByPrice) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
 func (s *TxByPrice) Push(x interface{}) {
 	*s = append(*s, x.(*Transaction))

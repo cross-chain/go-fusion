@@ -158,7 +158,8 @@ type TxPoolConfig struct {
 	AccountQueue uint64 // Maximum number of non-executable transaction slots permitted per account
 	GlobalQueue  uint64 // Maximum number of non-executable transaction slots for all accounts
 
-	Lifetime time.Duration // Maximum amount of time non-executable transaction are queued
+	Lifetime         time.Duration // Maximum amount of time non-executable transaction are queued
+	TicketTxLifetime time.Duration // Maximum amount of time buy ticket transaction are queued
 }
 
 // DefaultTxPoolConfig contains the default configurations for the transaction
@@ -175,7 +176,8 @@ var DefaultTxPoolConfig = TxPoolConfig{
 	AccountQueue: 64,
 	GlobalQueue:  1024,
 
-	Lifetime: 3 * time.Hour,
+	Lifetime:         3 * time.Hour,
+	TicketTxLifetime: 10 * time.Minute,
 }
 
 // sanitize checks the provided user configurations and changes anything that's
@@ -587,6 +589,12 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (replaced bool, err e
 	// If the transaction fails basic validation, discard it
 	if err := pool.validateTx(tx, local); err != nil {
 		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
+		invalidTxMeter.Mark(1)
+		return false, err
+	}
+	// If the transaction is an invalid FsnCall tx, discard it
+	if err := pool.validateAddFsnCallTx(tx); err != nil {
+		log.Trace("Discarding invalid FsnCall transaction", "hash", hash, "err", err)
 		invalidTxMeter.Mark(1)
 		return false, err
 	}
@@ -1202,6 +1210,17 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) []*types.Trans
 			log.Trace("Removed unpayable queued transaction", "hash", hash)
 		}
 		queuedNofundsMeter.Mark(int64(len(drops)))
+		// Drop all FsnCall transactions that are invalid
+		filter := func(tx *types.Transaction) bool {
+			return pool.validateFsnCallTx(tx) != nil
+		}
+		invalids, _ := list.FilterInvalid(filter)
+		for _, tx := range invalids {
+			hash := tx.Hash()
+			pool.all.Remove(hash)
+			log.Trace("Removed invalid queued transaction", "hash", hash)
+		}
+		queuedNofundsMeter.Mark(int64(len(invalids)))
 
 		// Gather all executable transactions and promote them
 		readies := list.Ready(pool.pendingNonces.get(addr))
@@ -1226,10 +1245,11 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) []*types.Trans
 			queuedRateLimitMeter.Mark(int64(len(caps)))
 		}
 		// Mark all the items dropped as removed
-		pool.priced.Removed(len(forwards) + len(drops) + len(caps))
-		queuedGauge.Dec(int64(len(forwards) + len(drops) + len(caps)))
+		totalCount := len(forwards) + len(drops) + len(invalids) + len(caps)
+		pool.priced.Removed(totalCount)
+		queuedGauge.Dec(int64(totalCount))
 		if pool.locals.contains(addr) {
-			localGauge.Dec(int64(len(forwards) + len(drops) + len(caps)))
+			localGauge.Dec(int64(totalCount))
 		}
 		// Delete the entire queue entry if it became empty.
 		if list.Empty() {
@@ -1386,6 +1406,16 @@ func (pool *TxPool) demoteUnexecutables() {
 			pool.all.Remove(hash)
 			log.Trace("Removed old pending transaction", "hash", hash)
 		}
+		// Drop all FsnCall transactions that are invalid
+		filter := func(tx *types.Transaction) bool {
+			return pool.validateFsnCallTx(tx) != nil
+		}
+		removes, adjusts := list.FilterInvalid(filter)
+		for _, tx := range removes {
+			hash := tx.Hash()
+			pool.all.Remove(hash)
+			log.Trace("Removed invalid pending transaction", "hash", hash)
+		}
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
 		drops, invalids := list.Filter(pool.currentState.GetBalance(common.SystemAssetID, addr), pool.currentMaxGas)
 		for _, tx := range drops {
@@ -1393,7 +1423,7 @@ func (pool *TxPool) demoteUnexecutables() {
 			log.Trace("Removed unpayable pending transaction", "hash", hash)
 			pool.all.Remove(hash)
 		}
-		pool.priced.Removed(len(olds) + len(drops))
+		pool.priced.Removed(len(olds) + len(removes) + len(drops))
 		pendingNofundsMeter.Mark(int64(len(drops)))
 
 		for _, tx := range invalids {
@@ -1401,9 +1431,19 @@ func (pool *TxPool) demoteUnexecutables() {
 			log.Trace("Demoting pending transaction", "hash", hash)
 			pool.enqueueTx(hash, tx)
 		}
-		pendingGauge.Dec(int64(len(olds) + len(drops) + len(invalids)))
+		if adjusts.Len() > 0 {
+			adjusts = types.TxDifference(adjusts, drops)
+			adjusts = types.TxDifference(adjusts, invalids)
+			for _, tx := range adjusts {
+				hash := tx.Hash()
+				pool.enqueueTx(hash, tx)
+				log.Trace("Demoting pending transaction", "hash", hash)
+			}
+		}
+		totalCount := len(olds) + len(drops) + len(invalids) + len(removes) + len(adjusts)
+		pendingGauge.Dec(int64(totalCount))
 		if pool.locals.contains(addr) {
-			localGauge.Dec(int64(len(olds) + len(drops) + len(invalids)))
+			localGauge.Dec(int64(totalCount))
 		}
 		// If there's a gap in front, alert (should never happen) and postpone all transactions
 		if list.Len() > 0 && list.txs.Get(nonce) == nil {
