@@ -17,16 +17,6 @@ import (
 
 //------------------------ StateDB -------------------------------------
 
-// Create a new state from a given trie and tickets' hash.
-func New2(root common.Hash, mixDigest common.Hash, db Database) (*StateDB, error) {
-	state, err := New(root, db)
-	if err != nil {
-		return nil, err
-	}
-	state.SetTicketsHash(mixDigest)
-	return state, nil
-}
-
 type CachedTickets struct {
 	hash    common.Hash
 	tickets common.TicketsDataSlice
@@ -241,10 +231,6 @@ func (s *StateDB) GetDataHash(addr common.Address) common.Hash {
 		return common.BytesToHash(stateObject.CodeHash())
 	}
 	return common.Hash{}
-}
-
-func (s *StateDB) SetTicketsHash(ticketsHash common.Hash) {
-	s.ticketsHash = ticketsHash
 }
 
 // IsTicketExist wacom

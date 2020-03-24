@@ -124,7 +124,7 @@ func (b *SimulatedBackend) rollback() {
 	statedb, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
+	b.pendingState, _ = state.New(b.pendingBlock.Root(), b.pendingBlock.MixDigest(), statedb.Database())
 }
 
 // stateByBlockNumber retrieves a state by a given blocknumber.
@@ -136,7 +136,7 @@ func (b *SimulatedBackend) stateByBlockNumber(ctx context.Context, blockNumber *
 	if err != nil {
 		return nil, err
 	}
-	return b.blockchain.StateAt(block.Hash())
+	return b.blockchain.StateAt(block.Root(), block.MixDigest())
 }
 
 // CodeAt returns the code associated with a certain account in the blockchain.
@@ -480,7 +480,7 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 	statedb, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
+	b.pendingState, _ = state.New(b.pendingBlock.Root(), b.pendingBlock.MixDigest(), statedb.Database())
 	return nil
 }
 
@@ -593,7 +593,7 @@ func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 	statedb, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
+	b.pendingState, _ = state.New(b.pendingBlock.Root(), b.pendingBlock.MixDigest(), statedb.Database())
 
 	return nil
 }

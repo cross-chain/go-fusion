@@ -615,7 +615,7 @@ func (w *worker) resultLoop() {
 
 // makeCurrent creates a new environment for the current cycle.
 func (w *worker) makeCurrent(parent *types.Block, header *types.Header) error {
-	state, err := w.chain.StateAt(parent.Root())
+	state, err := w.chain.StateAt(parent.Root(), parent.MixDigest())
 	if err != nil {
 		return err
 	}

@@ -492,7 +492,7 @@ func (api *RetestethAPI) mineBlock() error {
 			}
 		}
 	}
-	statedb, err := api.blockchain.StateAt(parent.Root())
+	statedb, err := api.blockchain.StateAt(parent.Root(), parent.MixDigest())
 	if err != nil {
 		return err
 	}
@@ -659,13 +659,13 @@ func (api *RetestethAPI) AccountRange(ctx context.Context,
 	var err error
 	if parentHeader == nil || int(txIndex) >= len(block.Transactions()) {
 		root = header.Root
-		statedb, err = api.blockchain.StateAt(root)
+		statedb, err = api.blockchain.StateAt(root, header.MixDigest)
 		if err != nil {
 			return AccountRangeResult{}, err
 		}
 	} else {
 		root = parentHeader.Root
-		statedb, err = api.blockchain.StateAt(root)
+		statedb, err = api.blockchain.StateAt(root, parentHeader.MixDigest)
 		if err != nil {
 			return AccountRangeResult{}, err
 		}
@@ -716,7 +716,7 @@ func (api *RetestethAPI) AccountRange(ctx context.Context,
 func (api *RetestethAPI) GetBalance(ctx context.Context, address common.Address, blockNr math.HexOrDecimal64) (*math.HexOrDecimal256, error) {
 	//fmt.Printf("GetBalance %x, block %d\n", address, blockNr)
 	header := api.blockchain.GetHeaderByNumber(uint64(blockNr))
-	statedb, err := api.blockchain.StateAt(header.Root)
+	statedb, err := api.blockchain.StateAt(header.Root, header.MixDigest)
 	if err != nil {
 		return nil, err
 	}
@@ -725,7 +725,7 @@ func (api *RetestethAPI) GetBalance(ctx context.Context, address common.Address,
 
 func (api *RetestethAPI) GetCode(ctx context.Context, address common.Address, blockNr math.HexOrDecimal64) (hexutil.Bytes, error) {
 	header := api.blockchain.GetHeaderByNumber(uint64(blockNr))
-	statedb, err := api.blockchain.StateAt(header.Root)
+	statedb, err := api.blockchain.StateAt(header.Root, header.MixDigest)
 	if err != nil {
 		return nil, err
 	}
@@ -734,7 +734,7 @@ func (api *RetestethAPI) GetCode(ctx context.Context, address common.Address, bl
 
 func (api *RetestethAPI) GetTransactionCount(ctx context.Context, address common.Address, blockNr math.HexOrDecimal64) (uint64, error) {
 	header := api.blockchain.GetHeaderByNumber(uint64(blockNr))
-	statedb, err := api.blockchain.StateAt(header.Root)
+	statedb, err := api.blockchain.StateAt(header.Root, header.MixDigest)
 	if err != nil {
 		return 0, err
 	}
@@ -769,13 +769,13 @@ func (api *RetestethAPI) StorageRangeAt(ctx context.Context,
 	var err error
 	if parentHeader == nil || int(txIndex) >= len(block.Transactions()) {
 		root = header.Root
-		statedb, err = api.blockchain.StateAt(root)
+		statedb, err = api.blockchain.StateAt(root, header.MixDigest)
 		if err != nil {
 			return StorageRangeResult{}, err
 		}
 	} else {
 		root = parentHeader.Root
-		statedb, err = api.blockchain.StateAt(root)
+		statedb, err = api.blockchain.StateAt(root, parentHeader.MixDigest)
 		if err != nil {
 			return StorageRangeResult{}, err
 		}
