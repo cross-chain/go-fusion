@@ -473,6 +473,15 @@ func (pool *TxPool) GetTransaction(hash common.Hash) *types.Transaction {
 	return nil
 }
 
+func (pool *TxPool) GetTransactionByPredicate(predicate func(*types.Transaction) bool) *types.Transaction {
+	for _, tx := range pool.pending {
+		if predicate(tx) {
+			return tx
+		}
+	}
+	return nil
+}
+
 // GetTransactions returns all currently processable transactions.
 // The returned slice may be modified by the caller.
 func (pool *TxPool) GetTransactions() (txs types.Transactions, err error) {

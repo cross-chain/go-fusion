@@ -118,6 +118,24 @@ func (api *PrivateMinerAPI) Start(threads *int) error {
 // the block creation level.
 func (api *PrivateMinerAPI) Stop() {
 	api.e.StopMining()
+	api.StopAutoBuyTicket()
+}
+
+// StartAutoBuyTicket
+func (api *PrivateMinerAPI) StartAutoBuyTicket() error {
+	if !api.e.IsMining() {
+		return fmt.Errorf("StartAutoBuyTicket Error: not mining")
+	}
+	if _, err := api.e.Etherbase(); err != nil {
+		return fmt.Errorf("StartAutoBuyTicket Error: coinbase not exist")
+	}
+	common.AutoBuyTicket = true
+	return nil
+}
+
+// StopAutoBuyTicket
+func (api *PrivateMinerAPI) StopAutoBuyTicket() {
+	common.AutoBuyTicket = false
 }
 
 // SetExtra sets the extra data string that is included when this miner mines a block.

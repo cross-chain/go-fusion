@@ -242,6 +242,10 @@ func (b *EthAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction 
 	return b.eth.txPool.Get(hash)
 }
 
+func (b *EthAPIBackend) GetPoolTransactionByPredicate(predicate func(*types.Transaction) bool) *types.Transaction {
+	return b.eth.txPool.GetByPredicate(predicate)
+}
+
 func (b *EthAPIBackend) GetTransaction(ctx context.Context, txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, error) {
 	tx, blockHash, blockNumber, index := rawdb.ReadTransaction(b.eth.ChainDb(), txHash)
 	return tx, blockHash, blockNumber, index, nil
@@ -304,4 +308,12 @@ func (b *EthAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.Ma
 	for i := 0; i < bloomFilterThreads; i++ {
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.eth.bloomRequests)
 	}
+}
+
+func (b *EthAPIBackend) IsMining() bool {
+	return b.eth.IsMining()
+}
+
+func (b *EthAPIBackend) Coinbase() (common.Address, error) {
+	return b.eth.Etherbase()
 }

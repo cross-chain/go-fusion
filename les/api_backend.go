@@ -189,6 +189,10 @@ func (b *LesApiBackend) GetPoolTransaction(txHash common.Hash) *types.Transactio
 	return b.eth.txPool.GetTransaction(txHash)
 }
 
+func (b *LesApiBackend) GetPoolTransactionByPredicate(predicate func(*types.Transaction) bool) *types.Transaction {
+	return b.eth.txPool.GetTransactionByPredicate(predicate)
+}
+
 func (b *LesApiBackend) GetTransaction(ctx context.Context, txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, error) {
 	return light.GetTransaction(ctx, b.eth.odr, txHash)
 }
@@ -276,4 +280,12 @@ func (b *LesApiBackend) ServiceFilter(ctx context.Context, session *bloombits.Ma
 	for i := 0; i < bloomFilterThreads; i++ {
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.eth.bloomRequests)
 	}
+}
+
+func (b *LesApiBackend) IsMining() bool {
+	return b.eth.IsMining()
+}
+
+func (b *LesApiBackend) Coinbase() (common.Address, error) {
+	return b.eth.Coinbase()
 }

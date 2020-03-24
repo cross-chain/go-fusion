@@ -279,3 +279,11 @@ func (s *LightEthereum) SetContractBackend(backend bind.ContractBackend) {
 	}
 	s.oracle.Start(backend)
 }
+
+func (b *LightEthereum) IsMining() bool {
+	return false
+}
+
+func (b *LightEthereum) Coinbase() (common.Address, error) {
+	return common.Address{}, fmt.Errorf("mining is not supported in light mode")
+}

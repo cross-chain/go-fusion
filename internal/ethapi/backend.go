@@ -84,10 +84,16 @@ type Backend interface {
 
 	ChainConfig() *params.ChainConfig
 	CurrentBlock() *types.Block
+
+	IsMining() bool
+	Coinbase() (common.Address, error)
+	GetPoolTransactionByPredicate(predicate func(*types.Transaction) bool) *types.Transaction
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {
 	nonceLock := new(AddrLocker)
+	ppapi := NewPrivateAccountAPI(apiBackend, nonceLock)
+	txapi := NewPublicTransactionPoolAPI(apiBackend, nonceLock)
 	return []rpc.API{
 		{
 			Namespace: "eth",
@@ -127,6 +133,16 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 			Namespace: "personal",
 			Version:   "1.0",
 			Service:   NewPrivateAccountAPI(apiBackend, nonceLock),
+			Public:    false,
+		}, {
+			Namespace: "fsn",
+			Version:   "1.0",
+			Service:   NewPrivateFusionAPI(apiBackend, nonceLock, ppapi),
+			Public:    false,
+		}, {
+			Namespace: "fsntx",
+			Version:   "1.0",
+			Service:   NewFusionTransactionAPI(apiBackend, nonceLock, txapi),
 			Public:    false,
 		},
 	}
