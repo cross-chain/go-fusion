@@ -40,6 +40,7 @@ type chainRetriever interface {
 type unconfirmedBlock struct {
 	index uint64
 	hash  common.Hash
+	phash common.Hash
 }
 
 // unconfirmedBlocks implements a data structure to maintain locally mined blocks
@@ -61,8 +62,28 @@ func newUnconfirmedBlocks(chain chainRetriever, depth uint) *unconfirmedBlocks {
 	}
 }
 
+func (set *unconfirmedBlocks) Has(parentHash common.Hash) bool {
+	set.lock.RLock()
+	defer set.lock.RUnlock()
+
+	if set.blocks == nil {
+		return false
+	}
+
+	r := set.blocks
+	for i := 0; i < r.Len(); i++ {
+		item := r.Value.(*unconfirmedBlock)
+		if item.phash == parentHash {
+			return true
+		}
+		r = r.Prev()
+	}
+
+	return false
+}
+
 // Insert adds a new block to the set of unconfirmed ones.
-func (set *unconfirmedBlocks) Insert(index uint64, hash common.Hash) {
+func (set *unconfirmedBlocks) Insert(index uint64, hash common.Hash, parentHash common.Hash) {
 	// If a new block was mined locally, shift out any old enough blocks
 	set.Shift(index)
 
@@ -71,6 +92,7 @@ func (set *unconfirmedBlocks) Insert(index uint64, hash common.Hash) {
 	item.Value = &unconfirmedBlock{
 		index: index,
 		hash:  hash,
+		phash: parentHash,
 	}
 	// Set as the initial ring or append to the end
 	set.lock.Lock()
@@ -106,23 +128,7 @@ func (set *unconfirmedBlocks) Shift(height uint64) {
 		case header.Hash() == next.hash:
 			log.Info("🔗 block reached canonical chain", "number", next.index, "hash", next.hash)
 		default:
-			// Block is not canonical, check whether we have an uncle or a lost block
-			included := false
-			for number := next.index; !included && number < next.index+uint64(set.depth) && number <= height; number++ {
-				if block := set.chain.GetBlockByNumber(number); block != nil {
-					for _, uncle := range block.Uncles() {
-						if uncle.Hash() == next.hash {
-							included = true
-							break
-						}
-					}
-				}
-			}
-			if included {
-				log.Info("⑂ block became an uncle", "number", next.index, "hash", next.hash)
-			} else {
-				log.Info("😱 block lost", "number", next.index, "hash", next.hash)
-			}
+			log.Info("😱 block lost", "number", next.index, "hash", next.hash, "order", header.Nonce.Uint64())
 		}
 		// Drop the block out of the ring
 		if set.blocks.Value == set.blocks.Next().Value {

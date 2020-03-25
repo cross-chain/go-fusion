@@ -291,6 +291,7 @@ func (dt *DaTong) Prepare(chain consensus.ChainReader, header *types.Header) err
 	}
 	header.Extra = header.Extra[:extraVanity]
 	header.Extra = append(header.Extra, make([]byte, extraSeal)...)
+	header.MixDigest = common.Hash{}
 	if common.GetPoSHashVersion(header.Number) < common.PosV2 {
 		header.UncleHash = types.EmptyUncleHash
 	} else {
