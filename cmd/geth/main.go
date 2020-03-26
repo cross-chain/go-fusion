@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/datong"
 	"github.com/ethereum/go-ethereum/console"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/downloader"
@@ -151,6 +152,7 @@ var (
 		utils.EWASMInterpreterFlag,
 		utils.EVMInterpreterFlag,
 		utils.ResyncFromHeightFlag,
+		utils.CheckPointsFileFlag,
 		configFileFlag,
 	}
 
@@ -327,6 +329,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	} else if ctx.GlobalBool(utils.TestnetFlag.Name) {
 		common.InitTestnet()
 	}
+	datong.InitCheckPoints(ctx.GlobalString(utils.CheckPointsFileFlag.Name))
 
 	// Start up the node itself
 	utils.StartNode(stack)

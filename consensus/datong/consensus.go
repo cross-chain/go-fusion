@@ -231,6 +231,18 @@ func (dt *DaTong) VerifySeal2(chain consensus.ChainReader, header, parent *types
 // VerifySeal checks whether the crypto seal on a header is valid according to
 // the consensus rules of the given engine.
 func (dt *DaTong) verifySeal(chain consensus.ChainReader, header *types.Header, parent *types.Header) error {
+	if isInRange, err := CheckPoint(header.Number.Uint64(), header.Hash()); isInRange {
+		if err == nil {
+			selected, retreat, err := dt.getSelectedAndRetreatedTickets(chain, header, parent)
+			if err != nil {
+				return err
+			}
+			// assign selected and retreated tickets (used in Finalize)
+			header.SetSelectedTicket(selected)
+			header.SetRetreatTickets(retreat)
+		}
+		return err
+	}
 	// verify ticket
 	snap, err := NewSnapshotFromHeader(header)
 	if err != nil {
@@ -1026,4 +1038,28 @@ func DecodeLogData(data []byte) (interface{}, error) {
 		}
 	}
 	return maps, nil
+}
+
+func (dt *DaTong) getSelectedAndRetreatedTickets(chain consensus.ChainReader, header *types.Header, parent *types.Header) (*common.Ticket, common.TicketPtrSlice, error) {
+	parentTickets, err := dt.getAllTickets(chain, parent)
+	if err != nil {
+		return nil, nil, err
+	}
+	snap, err := NewSnapshotFromHeader(header)
+	if err != nil {
+		return nil, nil, err
+	}
+	selectedTicket, err := parentTickets.Get(snap.Selected)
+	if err != nil {
+		return nil, nil, err
+	}
+	retreat := make(common.TicketPtrSlice, len(snap.Retreat))
+	for i, tid := range snap.Retreat {
+		ticket, err := parentTickets.Get(tid)
+		if err != nil {
+			return nil, nil, err
+		}
+		retreat[i] = ticket
+	}
+	return selectedTicket, retreat, nil
 }
