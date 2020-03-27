@@ -27,10 +27,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/FusionFoundation/go-fusion/accounts"
+	"github.com/FusionFoundation/go-fusion/common"
+	"github.com/FusionFoundation/go-fusion/log"
 	mapset "github.com/deckarep/golang-set"
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/log"
 )
 
 // Minimum amount of time between cache reloads. This limit applies if the platform does

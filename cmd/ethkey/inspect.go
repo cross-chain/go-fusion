@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/FusionFoundation/go-fusion/accounts/keystore"
+	"github.com/FusionFoundation/go-fusion/cmd/utils"
+	"github.com/FusionFoundation/go-fusion/crypto"
 	"gopkg.in/urfave/cli.v1"
 )
 

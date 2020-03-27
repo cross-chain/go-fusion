@@ -23,12 +23,12 @@ import (
 	"encoding/binary"
 	"sync/atomic"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/contracts/checkpointoracle"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/FusionFoundation/go-fusion/accounts/abi/bind"
+	"github.com/FusionFoundation/go-fusion/common"
+	"github.com/FusionFoundation/go-fusion/contracts/checkpointoracle"
+	"github.com/FusionFoundation/go-fusion/crypto"
+	"github.com/FusionFoundation/go-fusion/log"
+	"github.com/FusionFoundation/go-fusion/params"
 )
 
 // CheckpointOracle is responsible for offering the latest stable checkpoint

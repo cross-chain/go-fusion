@@ -3,7 +3,7 @@ package common
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/FusionFoundation/go-fusion/common/hexutil"
 )
 
 type FSNBaseArgsInterface interface {

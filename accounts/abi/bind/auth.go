@@ -22,12 +22,12 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/external"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/FusionFoundation/go-fusion/accounts"
+	"github.com/FusionFoundation/go-fusion/accounts/external"
+	"github.com/FusionFoundation/go-fusion/accounts/keystore"
+	"github.com/FusionFoundation/go-fusion/common"
+	"github.com/FusionFoundation/go-fusion/core/types"
+	"github.com/FusionFoundation/go-fusion/crypto"
 )
 
 // NewTransactor is a utility method to easily create a transaction signer from

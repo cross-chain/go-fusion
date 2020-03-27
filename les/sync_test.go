@@ -22,11 +22,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/light"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/FusionFoundation/go-fusion/accounts/abi/bind"
+	"github.com/FusionFoundation/go-fusion/core"
+	"github.com/FusionFoundation/go-fusion/crypto"
+	"github.com/FusionFoundation/go-fusion/light"
+	"github.com/FusionFoundation/go-fusion/params"
 )
 
 // Test light syncing which will download all headers from genesis.

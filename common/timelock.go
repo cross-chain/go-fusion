@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"sort"
 
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/FusionFoundation/go-fusion/log"
 )
 
 // TimeLockType wacom

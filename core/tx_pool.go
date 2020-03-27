@@ -24,14 +24,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/prque"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/FusionFoundation/go-fusion/common"
+	"github.com/FusionFoundation/go-fusion/common/prque"
+	"github.com/FusionFoundation/go-fusion/core/state"
+	"github.com/FusionFoundation/go-fusion/core/types"
+	"github.com/FusionFoundation/go-fusion/event"
+	"github.com/FusionFoundation/go-fusion/log"
+	"github.com/FusionFoundation/go-fusion/metrics"
+	"github.com/FusionFoundation/go-fusion/params"
 )
 
 const (

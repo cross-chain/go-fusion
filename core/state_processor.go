@@ -17,14 +17,14 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/misc"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/FusionFoundation/go-fusion/common"
+	"github.com/FusionFoundation/go-fusion/consensus"
+	"github.com/FusionFoundation/go-fusion/consensus/misc"
+	"github.com/FusionFoundation/go-fusion/core/state"
+	"github.com/FusionFoundation/go-fusion/core/types"
+	"github.com/FusionFoundation/go-fusion/core/vm"
+	"github.com/FusionFoundation/go-fusion/crypto"
+	"github.com/FusionFoundation/go-fusion/params"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning

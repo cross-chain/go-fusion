@@ -19,7 +19,7 @@ package state
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/FusionFoundation/go-fusion/common"
 )
 
 // journalEntry is a modification entry in the state change journal that can be
@@ -94,10 +94,10 @@ type (
 	}
 	suicideChange struct {
 		isTimeLock          bool
-		account     *common.Address
+		account             *common.Address
 		assetID             common.Hash
-		prev        bool // whether account had already suicided
-		prevbalance *big.Int
+		prev                bool // whether account had already suicided
+		prevbalance         *big.Int
 		prevTimeLockBalance *common.TimeLock
 	}
 

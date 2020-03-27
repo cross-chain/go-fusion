@@ -22,17 +22,17 @@ import (
 	"errors"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/eth/filters"
-	"github.com/ethereum/go-ethereum/internal/ethapi"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/rpc"
+	ethereum "github.com/FusionFoundation/go-fusion"
+	"github.com/FusionFoundation/go-fusion/common"
+	"github.com/FusionFoundation/go-fusion/common/hexutil"
+	"github.com/FusionFoundation/go-fusion/core/rawdb"
+	"github.com/FusionFoundation/go-fusion/core/state"
+	"github.com/FusionFoundation/go-fusion/core/types"
+	"github.com/FusionFoundation/go-fusion/core/vm"
+	"github.com/FusionFoundation/go-fusion/eth/filters"
+	"github.com/FusionFoundation/go-fusion/internal/ethapi"
+	"github.com/FusionFoundation/go-fusion/rlp"
+	"github.com/FusionFoundation/go-fusion/rpc"
 )
 
 var (

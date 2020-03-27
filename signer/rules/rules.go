@@ -22,12 +22,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/FusionFoundation/go-fusion/internal/ethapi"
+	"github.com/FusionFoundation/go-fusion/log"
+	"github.com/FusionFoundation/go-fusion/signer/core"
+	"github.com/FusionFoundation/go-fusion/signer/rules/deps"
+	"github.com/FusionFoundation/go-fusion/signer/storage"
 	"github.com/dop251/goja"
-	"github.com/ethereum/go-ethereum/internal/ethapi"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/signer/core"
-	"github.com/ethereum/go-ethereum/signer/rules/deps"
-	"github.com/ethereum/go-ethereum/signer/storage"
 )
 
 var (

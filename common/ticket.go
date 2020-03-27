@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/FusionFoundation/go-fusion/log"
 )
 
 // TicketPrice  place holder for ticket price

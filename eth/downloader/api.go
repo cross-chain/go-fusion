@@ -20,9 +20,9 @@ import (
 	"context"
 	"sync"
 
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/rpc"
+	ethereum "github.com/FusionFoundation/go-fusion"
+	"github.com/FusionFoundation/go-fusion/event"
+	"github.com/FusionFoundation/go-fusion/rpc"
 )
 
 // PublicDownloaderAPI provides an API which gives information about the current synchronisation status.
@@ -40,8 +40,8 @@ type PublicDownloaderAPI struct {
 // installSyncSubscription channel.
 func NewPublicDownloaderAPI(d *Downloader, m *event.TypeMux) *PublicDownloaderAPI {
 	api := &PublicDownloaderAPI{
-		d:                         d,
-		mux:                       m,
+		d:   d,
+		mux: m,
 		installSyncSubscription:   make(chan chan interface{}),
 		uninstallSyncSubscription: make(chan *uninstallSyncSubscriptionRequest),
 	}

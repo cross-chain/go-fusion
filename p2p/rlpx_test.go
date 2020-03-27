@@ -31,11 +31,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FusionFoundation/go-fusion/crypto"
+	"github.com/FusionFoundation/go-fusion/crypto/ecies"
+	"github.com/FusionFoundation/go-fusion/p2p/simulations/pipes"
+	"github.com/FusionFoundation/go-fusion/rlp"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/ecies"
-	"github.com/ethereum/go-ethereum/p2p/simulations/pipes"
-	"github.com/ethereum/go-ethereum/rlp"
 	"golang.org/x/crypto/sha3"
 )
 

@@ -27,11 +27,11 @@ import (
 
 	cli "gopkg.in/urfave/cli.v1"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/eth"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/params"
-	whisper "github.com/ethereum/go-ethereum/whisper/whisperv6"
+	"github.com/FusionFoundation/go-fusion/cmd/utils"
+	"github.com/FusionFoundation/go-fusion/eth"
+	"github.com/FusionFoundation/go-fusion/node"
+	"github.com/FusionFoundation/go-fusion/params"
+	whisper "github.com/FusionFoundation/go-fusion/whisper/whisperv6"
 	"github.com/naoina/toml"
 )
 

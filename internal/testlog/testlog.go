@@ -21,7 +21,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/FusionFoundation/go-fusion/log"
 )
 
 // Handler returns a log handler which logs to the unit test log of t.

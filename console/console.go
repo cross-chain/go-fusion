@@ -28,11 +28,11 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/FusionFoundation/go-fusion/internal/jsre"
+	"github.com/FusionFoundation/go-fusion/internal/jsre/deps"
+	"github.com/FusionFoundation/go-fusion/internal/web3ext"
+	"github.com/FusionFoundation/go-fusion/rpc"
 	"github.com/dop251/goja"
-	"github.com/ethereum/go-ethereum/internal/jsre"
-	"github.com/ethereum/go-ethereum/internal/jsre/deps"
-	"github.com/ethereum/go-ethereum/internal/web3ext"
-	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
 )

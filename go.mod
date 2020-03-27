@@ -1,4 +1,4 @@
-module github.com/ethereum/go-ethereum
+module github.com/FusionFoundation/go-fusion
 
 go 1.13
 
