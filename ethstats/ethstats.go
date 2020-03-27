@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/mclock"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/consensus/datong"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth"
@@ -481,6 +482,8 @@ type blockStats struct {
 	TxHash     common.Hash    `json:"transactionsRoot"`
 	Root       common.Hash    `json:"stateRoot"`
 	Uncles     uncleStats     `json:"uncles"`
+	// total number of tickets
+	TicketNumber int `json:"ticketNumber"`
 }
 
 // txStats is the information to report about individual transactions.
@@ -553,6 +556,13 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 	// Assemble and return the block stats
 	author, _ := s.engine.Author(header)
 
+	var ticketNumber int
+	if _, ok := s.engine.(*datong.DaTong); ok {
+		snap, err := datong.NewSnapshotFromHeader(header)
+		if err == nil {
+			ticketNumber = snap.TicketNumber
+		}
+	}
 	return &blockStats{
 		Number:     header.Number,
 		Hash:       header.Hash(),
@@ -567,6 +577,8 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 		TxHash:     header.TxHash,
 		Root:       header.Root,
 		Uncles:     uncles,
+		// total number of tickets
+		TicketNumber: ticketNumber,
 	}
 }
 
@@ -670,6 +682,9 @@ type nodeStats struct {
 	Peers    int  `json:"peers"`
 	GasPrice int  `json:"gasPrice"`
 	Uptime   int  `json:"uptime"`
+
+	TicketNumber   *big.Int `json:"ticketNumber"`
+	MyTicketNumber *big.Int `json:"myTicketNumber"`
 }
 
 // reportPending retrieves various stats about the node at the networking and
@@ -681,10 +696,25 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 		hashrate int
 		syncing  bool
 		gasprice int
+
+		ticketNumber   *big.Int
+		myTicketNumber *big.Int
 	)
 	if s.eth != nil {
 		mining = s.eth.Miner().Mining()
 		hashrate = int(s.eth.Miner().HashRate())
+		if _, ok := s.engine.(*datong.DaTong); ok {
+			header := s.eth.BlockChain().CurrentBlock().Header()
+			if statedb, err := s.eth.BlockChain().StateAt(header.Root, header.MixDigest); err == nil {
+				if tickets, err := statedb.AllTickets(); err == nil {
+					ticketNumber = new(big.Int).SetUint64(tickets.NumberOfTickets())
+					etherbase, _ := s.eth.Etherbase()
+					if etherbase != (common.Address{}) {
+						myTicketNumber = new(big.Int).SetUint64(tickets.NumberOfTicketsByAddress(etherbase))
+					}
+				}
+			}
+		}
 
 		sync := s.eth.Downloader().Progress()
 		syncing = s.eth.BlockChain().CurrentHeader().Number.Uint64() >= sync.HighestBlock
@@ -708,6 +738,10 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 			GasPrice: gasprice,
 			Syncing:  syncing,
 			Uptime:   100,
+			// total number of tickets
+			TicketNumber: ticketNumber,
+			// number of my tickets
+			MyTicketNumber: myTicketNumber,
 		},
 	}
 	report := map[string][]interface{}{
