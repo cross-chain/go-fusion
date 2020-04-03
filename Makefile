@@ -6,7 +6,7 @@
 
 GOBIN = ./build/bin
 GO ?= latest
-GORUN = env GO111MODULE=on go run
+GORUN = env GO111MODULE=on GOPROXY=https://goproxy.io go run
 
 efsn:
 	$(GORUN) build/ci.go install ./cmd/efsn
