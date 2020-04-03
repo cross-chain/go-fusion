@@ -67,7 +67,7 @@ const (
 
 // RPC packet types
 const (
-	p_pingV4 = iota + 1 // zero is 'reserved'
+	p_pingV4 = iota + 40 // zero is 'reserved'
 	p_pongV4
 	p_findnodeV4
 	p_neighborsV4
