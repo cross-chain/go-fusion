@@ -222,7 +222,15 @@ aware of and agree upon. This consists of a small JSON file (e.g. call it `genes
     "eip158Block": 0,
     "byzantiumBlock": 0,
     "constantinopleBlock": 0,
-    "petersburgBlock": 0
+    "petersburgBlock": 0,
+    "DaTong": {
+      "period": 15
+    }
+  },
+  "ticketsCreate": {
+    "owner": "0x0000000000000000000000000000000000000001",
+    "count": 5,
+    "time": 1586434131
   },
   "alloc": {},
   "coinbase": "0x0000000000000000000000000000000000000000",
@@ -235,6 +243,11 @@ aware of and agree upon. This consists of a small JSON file (e.g. call it `genes
   "timestamp": "0x00"
 }
 ```
+
+the `ticketsCreate` field must be specified to trigger mining where
+`owner` is the initial miner address,
+`count` is the initial number of tickets, and
+`time` is the start time of these tickets (normally near to `now` when you start this chain)
 
 The above fields should be fine for most purposes, although we'd recommend changing
 the `nonce` to some random value so you prevent unknown remote nodes from being able

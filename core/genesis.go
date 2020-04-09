@@ -73,6 +73,10 @@ type TicketsCreate struct {
 	Time  uint64         `json:"time"`
 }
 
+func (tc *TicketsCreate) String() string {
+	return fmt.Sprintf("{Owner: %v Count: %v Time: %v}", tc.Owner.String(), tc.Count, tc.Time)
+}
+
 // GenesisAlloc specifies the initial state that is part of the genesis block.
 type GenesisAlloc map[common.Address]GenesisAccount
 
