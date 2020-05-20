@@ -427,7 +427,7 @@ func (c *ChainConfig) IsMuirGlacier(num *big.Int) bool {
 // - equal to or greater than the PetersburgBlock fork block,
 // - OR is nil, and Constantinople is active
 func (c *ChainConfig) IsPetersburg(num *big.Int) bool {
-	return isForked(c.PetersburgBlock, num) || c.PetersburgBlock == nil && isForked(c.ConstantinopleBlock, num)
+	return isForked(c.PetersburgBlock, num) //|| c.PetersburgBlock == nil && isForked(c.ConstantinopleBlock, num)
 }
 
 // IsIstanbul returns whether num is either equal to the Istanbul fork block or greater.
