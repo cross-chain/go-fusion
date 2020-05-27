@@ -97,7 +97,10 @@ func (b *EthAPIBackend) BlockByNumber(ctx context.Context, number rpc.BlockNumbe
 	// Pending block is only known by the miner
 	if number == rpc.PendingBlockNumber {
 		block := b.eth.miner.PendingBlock()
-		return block, nil
+		if block != nil {
+			return block, nil
+		}
+		return b.eth.blockchain.CurrentBlock(), nil
 	}
 	// Otherwise resolve and return the block
 	if number == rpc.LatestBlockNumber {
