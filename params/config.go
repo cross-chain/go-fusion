@@ -63,7 +63,7 @@ var (
 		EIP155Block:         big.NewInt(0),
 		EIP158Block:         big.NewInt(0),
 		ByzantiumBlock:      big.NewInt(0),
-		ConstantinopleBlock: new(big.Int).SetUint64(common.MAINNET_FORKS[1]),
+		ConstantinopleBlock: common.MainnetConstantinopleEnableHeight,
 		PetersburgBlock:     nil,
 		IstanbulBlock:       nil,
 		MuirGlacierBlock:    nil,
@@ -104,7 +104,7 @@ var (
 		EIP155Block:         big.NewInt(0),
 		EIP158Block:         big.NewInt(0),
 		ByzantiumBlock:      big.NewInt(0),
-		ConstantinopleBlock: new(big.Int).SetUint64(common.TESTNET_FORKS[1]),
+		ConstantinopleBlock: common.TestnetConstantinopleEnableHeight,
 		PetersburgBlock:     nil,
 		IstanbulBlock:       nil,
 		MuirGlacierBlock:    nil,
@@ -225,7 +225,7 @@ var (
 		EIP155Block:         big.NewInt(0),
 		EIP158Block:         big.NewInt(0),
 		ByzantiumBlock:      big.NewInt(0),
-		ConstantinopleBlock: big.NewInt(0),
+		ConstantinopleBlock: common.DevnetConstantinopleEnableHeight,
 		DaTong: &DaTongConfig{
 			Period: 15,
 		},
@@ -519,6 +519,12 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	}
 	if isForkIncompatible(c.ByzantiumBlock, newcfg.ByzantiumBlock, head) {
 		return newCompatError("Byzantium fork block", c.ByzantiumBlock, newcfg.ByzantiumBlock)
+	}
+	if c.ConstantinopleBlock != nil { // adjust old stored ConstantinopleBlock
+		constantinopleEnableHeight := common.GetConstantinopleEnableHeight()
+		if constantinopleEnableHeight == nil || c.ConstantinopleBlock.Cmp(constantinopleEnableHeight) < 0 {
+			c.ConstantinopleBlock = constantinopleEnableHeight
+		}
 	}
 	if isForkIncompatible(c.ConstantinopleBlock, newcfg.ConstantinopleBlock, head) {
 		return newCompatError("Constantinople fork block", c.ConstantinopleBlock, newcfg.ConstantinopleBlock)
