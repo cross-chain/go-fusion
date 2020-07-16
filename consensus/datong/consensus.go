@@ -231,7 +231,7 @@ func (dt *DaTong) VerifySeal2(chain consensus.ChainReader, header, parent *types
 // VerifySeal checks whether the crypto seal on a header is valid according to
 // the consensus rules of the given engine.
 func (dt *DaTong) verifySeal(chain consensus.ChainReader, header *types.Header, parent *types.Header) error {
-	if isInRange, err := CheckPoint(header.Number.Uint64(), header.Hash()); isInRange {
+	if isInRange, err := CheckPoint(chain.Config().ChainID, header.Number.Uint64(), header.Hash()); isInRange {
 		if err == nil {
 			selected, retreat, err := dt.getSelectedAndRetreatedTickets(chain, header, parent)
 			if err != nil {
