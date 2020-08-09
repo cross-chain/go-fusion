@@ -30,6 +30,11 @@ type StateDB interface {
 	SubBalance(common.Address, common.Hash, *big.Int)
 	AddBalance(common.Address, common.Hash, *big.Int)
 	GetBalance(common.Hash, common.Address) *big.Int
+	SubTimeLockBalance(common.Address, common.Hash, *common.TimeLock, *big.Int, uint64)
+	AddTimeLockBalance(common.Address, common.Hash, *common.TimeLock, *big.Int, uint64)
+	SetTimeLockBalance(common.Address, common.Hash, *common.TimeLock)
+	GetTimeLockBalance(common.Hash, common.Address) *common.TimeLock
+	TransferNotation(notation uint64, from common.Address, to common.Address) error
 
 	GetNonce(common.Address) uint64
 	SetNonce(common.Address, uint64)
@@ -63,19 +68,12 @@ type StateDB interface {
 	AddLog(*types.Log)
 	AddPreimage(common.Hash, []byte)
 
-	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
-
-	SubTimeLockBalance(common.Address, common.Hash, *common.TimeLock, *big.Int, uint64)
-	AddTimeLockBalance(common.Address, common.Hash, *common.TimeLock, *big.Int, uint64)
-	GetTimeLockBalance(common.Hash, common.Address) *common.TimeLock
-	SetTimeLockBalance(common.Address, common.Hash, *common.TimeLock)
+	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool)
 
 	GenNotation(common.Address) error
 	GetNotation(common.Address) uint64
-	TransferNotation(notation uint64, from common.Address, to common.Address) error
 
 	GenAsset(common.Asset) error
-	GetAsset(assetID common.Hash) (common.Asset, error)
 	UpdateAsset(common.Asset) error
 
 	AllTickets() (common.TicketsDataSlice, error)
@@ -88,7 +86,7 @@ type StateDB interface {
 	UpdateSwap(swap common.Swap) error
 	RemoveSwap(id common.Hash) error
 	GetSwap(swapID common.Hash) (common.Swap, error)
-
+	GetAsset(assetID common.Hash) (common.Asset, error)
 	AddMultiSwap(swap common.MultiSwap) error
 	UpdateMultiSwap(swap common.MultiSwap) error
 	RemoveMultiSwap(id common.Hash) error
@@ -98,7 +96,7 @@ type StateDB interface {
 	AddReport(report []byte) error
 }
 
-// CallContext provides a basic interface for the EVM calling conventions. The EVM
+// CallContext provides a basic interface for the EVM calling conventions. The EVM EVM
 // depends on this context being implemented for doing subcalls and initialising new EVM contracts.
 type CallContext interface {
 	// Call another contract

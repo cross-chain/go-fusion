@@ -164,11 +164,10 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 
 // RunNoVerify runs a specific subtest and returns the statedb and post-state root
 func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config) (*state.StateDB, common.Hash, error) {
-	config, eips, err := getVMConfig(subtest.Fork)
+	config, _, err := getVMConfig(subtest.Fork)
 	if err != nil {
 		return nil, common.Hash{}, UnsupportedForkError{subtest.Fork}
 	}
-	vmconfig.ExtraEips = eips
 	block := t.genesis(config).ToBlock(nil)
 	statedb := MakePreState(rawdb.NewMemoryDatabase(), t.json.Pre)
 

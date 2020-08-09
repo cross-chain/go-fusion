@@ -516,33 +516,20 @@ func (s *StateDB) createObject(addr common.Address) (newobj, prev *stateObject) 
 	return newobj, prev
 }
 
-func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.Hash) bool) error {
+func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.Hash) bool) {
 	so := db.getStateObject(addr)
 	if so == nil {
-		return nil
+		return
 	}
 	it := trie.NewIterator(so.getTrie(db.db).NodeIterator(nil))
-
 	for it.Next() {
 		key := common.BytesToHash(db.trie.GetKey(it.Key))
 		if value, dirty := so.dirtyStorage[key]; dirty {
-			if !cb(key, value) {
-				return nil
-			}
+			cb(key, value)
 			continue
 		}
-
-		if len(it.Value) > 0 {
-			_, content, _, err := rlp.Split(it.Value)
-			if err != nil {
-				return err
-			}
-			if !cb(key, common.BytesToHash(content)) {
-				return nil
-			}
-		}
+		cb(key, common.BytesToHash(it.Value))
 	}
-	return nil
 }
 
 // Copy creates a deep, independent copy of the state.

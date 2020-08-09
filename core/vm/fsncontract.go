@@ -17,17 +17,6 @@ var (
 	ErrValueOverflow          = errors.New("value overflow")
 	ErrWrongLenOfInput        = errors.New("wrong length of input")
 	ErrFcInvalidSendAssetFlag = errors.New("invalid send asset flag")
-
-	ErrMustCallByContract      = errors.New("must call by contract")
-	ErrForbidCallByContract    = errors.New("forbid call by contract")
-	ErrForbidDelegateCall      = errors.New("forbid delegate call")
-	ErrDataError               = errors.New("data error")
-	ErrToAddressMustBeContract = errors.New("receiver address must be contract")
-)
-
-type (
-	CanTransferTimeLockFunc func(db StateDB, addr common.Address, p *common.TransferTimeLockParam) bool
-	TransferTimeLockFunc    func(db StateDB, sender, recipient common.Address, p *common.TransferTimeLockParam)
 )
 
 type FcFuncType uint8
@@ -186,31 +175,4 @@ func toOKData(str string) []byte {
 
 func toErrData(err error) []byte {
 	return []byte("Error: " + err.Error())
-}
-
-func (c *Contract) GetParentCaller() (common.Address, error) {
-	parent, ok := c.caller.(*Contract)
-	if !ok {
-		return common.Address{}, ErrMustCallByContract
-	}
-	return parent.CallerAddress, nil
-}
-
-func getPrecompiledContracts(evm *EVM, codeAddr *common.Address, contract *Contract) PrecompiledContract {
-	if codeAddr == nil {
-		return nil
-	}
-	if common.IsHardFork(2, evm.BlockNumber) {
-		if *codeAddr == FSNContractAddress {
-			return NewFSNContract(evm, contract)
-		}
-	}
-	precompiles := PrecompiledContractsHomestead
-	if evm.chainRules.IsByzantium {
-		precompiles = PrecompiledContractsByzantium
-	}
-	if evm.chainRules.IsIstanbul {
-		precompiles = PrecompiledContractsIstanbul
-	}
-	return precompiles[*codeAddr]
 }
