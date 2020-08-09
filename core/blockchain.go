@@ -1547,11 +1547,16 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 	senderCacher.recoverFromBlocks(types.MakeSigner(bc.chainConfig, chain[0].Number()), chain)
 
 	var (
-		stats     = insertStats{startTime: mclock.Now()}
-		lastCanon *types.Block
+		stats          = insertStats{startTime: mclock.Now()}
+		lastCanon      *types.Block
+		lastPowerCanon *types.Block // last block with first order
 	)
 	// Fire a single chain head event if we've progressed the chain
 	defer func() {
+		if lastPowerCanon != nil && lastPowerCanon != lastCanon {
+			log.Info("notify first order chain head event", "number", lastPowerCanon.Number(), "hash", lastPowerCanon.Hash())
+			bc.chainHeadFeed.Send(ChainHeadEvent{lastPowerCanon})
+		}
 		if lastCanon != nil && bc.CurrentBlock().Hash() == lastCanon.Hash() {
 			bc.chainHeadFeed.Send(ChainHeadEvent{lastCanon})
 		}
@@ -1608,6 +1613,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 				return it.index, err
 			}
 			lastCanon = block
+			if block.Nonce() == 0 {
+				lastPowerCanon = block
+			}
 
 			block, err = it.next()
 		}
@@ -1675,6 +1683,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 			// We can assume that logs are empty here, since the only way for consecutive
 			// Clique blocks to have the same state is if there are no transactions.
 			lastCanon = block
+			if block.Nonce() == 0 {
+				lastPowerCanon = block
+			}
 			continue
 		}
 		// Retrieve the parent block and it's state to execute on top
@@ -1785,6 +1796,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 				"diff", block.Difficulty(), "elapsed", common.PrettyDuration(time.Since(start)),
 				"txs", len(block.Transactions()), "gas", block.GasUsed(), "uncles", len(block.Uncles()),
 				"root", block.Root())
+		}
+		if block.Nonce() == 0 {
+			lastPowerCanon = block
 		}
 		stats.processed++
 		stats.usedGas += usedGas
